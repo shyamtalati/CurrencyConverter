@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Currency Converter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Currency Converter</h1>
+    <div id="container">
+        <div id="converter">
+            <label>Amount:
+                <span id="fromSymbol"></span>
+                <input type="number" id="amount" value="1" min="0" step="any">
+            </label>
+            <label>From:
+                <select id="fromCurrency"></select>
+            </label>
+            <label>To:
+                <select id="toCurrency"></select>
+            </label>
+            <div id="converter-buttons">
+                <button id="convert">Convert</button>
+                <button id="swap">Swap</button>
+                <button id="reset">Reset</button>
+            </div>
+        </div>
+        <div id="history">
+            <h2>Conversion History</h2>
+            <div id="historyContent">
+                <!-- History entries will appear here -->
+            </div>
+        </div>
+    </div>
+    <div id="result"></div>
+    <script src="script.js"></script>
+</body>
+</html>

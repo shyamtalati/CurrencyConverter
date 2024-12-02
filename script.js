@@ -6,7 +6,12 @@ let conversionHistory = [];
 // Function to fetch currency symbols
 function fetchCurrencySymbols() {
     return fetch('https://restcountries.com/v3.1/all')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error fetching symbols: ' + response.statusText);
+            }
+            return response.json();
+        })
         .then(countries => {
             countries.forEach(country => {
                 if (country.currencies) {
@@ -18,22 +23,32 @@ function fetchCurrencySymbols() {
                     }
                 }
             });
+            console.log('Currency symbols fetched:', currencySymbols);
+        })
+        .catch(error => {
+            console.error('Error fetching currency symbols:', error);
+            alert("Failed to fetch currency symbols. Please try again.");
         });
 }
 
-// Function to fetch currency codes and populate dropdowns
+// Function to fetch currency codes from Frankfurter API and populate dropdowns
 function fetchCurrencyCodes() {
     return fetch('https://api.frankfurter.app/currencies')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error fetching currencies: ' + response.statusText);
+            }
+            return response.json();
+        })
         .then(data => {
-            const currencyCodes = Object.keys(data);
             const fromCurrency = document.getElementById('fromCurrency');
             const toCurrency = document.getElementById('toCurrency');
 
-            currencyCodes.forEach(code => {
-                const symbol = currencySymbols[code] || '';
+            for (let code in data) {
+                const symbol = currencySymbols[code] || ''; // Use the fetched symbol if available
                 const optionText = `${symbol} ${code} - ${data[code]}`;
 
+                // Add to both "From" and "To" dropdowns
                 const option1 = document.createElement('option');
                 option1.value = code;
                 option1.textContent = optionText;
@@ -43,24 +58,25 @@ function fetchCurrencyCodes() {
                 option2.value = code;
                 option2.textContent = optionText;
                 toCurrency.appendChild(option2);
-            });
+            }
 
-            // Set default values and initial symbol
+            // Set default values and update symbol
             fromCurrency.value = 'USD';
             toCurrency.value = 'EUR';
             document.getElementById('fromSymbol').textContent = currencySymbols[fromCurrency.value] || '';
 
-            // Update symbol when the "From" currency changes
+            // Update symbol when "From" currency changes
             fromCurrency.addEventListener('change', () => {
                 document.getElementById('fromSymbol').textContent = currencySymbols[fromCurrency.value] || '';
             });
+
+            console.log('Currency codes fetched successfully:', data);
+        })
+        .catch(error => {
+            console.error('Error fetching currency codes:', error);
+            alert("Failed to fetch currency codes. Please try again.");
         });
 }
-
-// Fetch currency symbols and then fetch currency codes
-fetchCurrencySymbols()
-    .then(fetchCurrencyCodes)
-    .catch(error => console.error('Error fetching currency codes or symbols:', error));
 
 // Function to perform currency conversion
 function convertCurrency() {
@@ -81,37 +97,36 @@ function convertCurrency() {
     const url = `https://api.frankfurter.app/latest?amount=${amount}&from=${fromCurrencyValue}&to=${toCurrencyValue}`;
 
     fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            if (data.rates && data.rates[toCurrencyValue]) {
-                const convertedAmount = data.rates[toCurrencyValue];
-                const fromSymbol = currencySymbols[fromCurrencyValue] || '';
-                const toSymbol = currencySymbols[toCurrencyValue] || '';
-
-                const formattedAmount = amount.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                const formattedConvertedAmount = convertedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 });
-
-                const resultText = `${fromSymbol}${formattedAmount} ${fromCurrencyValue} = ${toSymbol}${formattedConvertedAmount} ${toCurrencyValue}`;
-                const resultElement = document.getElementById('result');
-                
-                // Add slide-in and pop classes to result for visual emphasis
-                resultElement.className = 'slide-in pop';
-                resultElement.textContent = resultText;
-
-                // Save to history
-                const timestamp = new Date().toLocaleString();
-                const historyEntry = `${timestamp}: ${resultText}`;
-                conversionHistory.push(historyEntry);
-
-                // Add the history entry to the page
-                updateHistoryDisplay(historyEntry);
-            } else {
-                alert('Conversion rate not available.');
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error fetching exchange rate: ' + response.statusText);
             }
+            return response.json();
+        })
+        .then(data => {
+            const convertedAmount = data.rates[toCurrencyValue];
+            const fromSymbol = currencySymbols[fromCurrencyValue] || '';
+            const toSymbol = currencySymbols[toCurrencyValue] || '';
+
+            const formattedAmount = amount.toLocaleString(undefined, { minimumFractionDigits: 2 });
+            const formattedConvertedAmount = convertedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+            const resultText = `${fromSymbol}${formattedAmount} ${fromCurrencyValue} = ${toSymbol}${formattedConvertedAmount} ${toCurrencyValue}`;
+            const resultElement = document.getElementById('result');
+            resultElement.className = 'slide-in pop'; // Add animation classes
+            resultElement.textContent = resultText;
+
+            // Save to history
+            const timestamp = new Date().toLocaleString();
+            const historyEntry = `${timestamp}: ${resultText}`;
+            conversionHistory.push(historyEntry);
+
+            // Add to history section
+            updateHistoryDisplay(historyEntry);
         })
         .catch(error => {
-            console.error('Error fetching exchange rates:', error);
-            alert('An error occurred. Please try again later.');
+            console.error('Error performing currency conversion:', error);
+            alert("Failed to convert currency. Please try again.");
         });
 }
 
@@ -124,30 +139,26 @@ function updateHistoryDisplay(entry) {
     historyContent.appendChild(entryDiv);
 }
 
-// Function to swap currencies
+// Function to swap "From" and "To" currencies
 function swapCurrencies() {
     const fromCurrency = document.getElementById('fromCurrency');
     const toCurrency = document.getElementById('toCurrency');
 
-    // Swap the selected currencies
     const temp = fromCurrency.value;
     fromCurrency.value = toCurrency.value;
     toCurrency.value = temp;
 
-    // Update the displayed symbol
     document.getElementById('fromSymbol').textContent = currencySymbols[fromCurrency.value] || '';
 }
 
 // Function to reset the form
 function resetForm() {
-    // Reset input fields
     document.getElementById('amount').value = '1';
     document.getElementById('fromCurrency').value = 'USD';
     document.getElementById('toCurrency').value = 'EUR';
     document.getElementById('result').textContent = '';
     document.getElementById('fromSymbol').textContent = currencySymbols['USD'] || '';
 
-    // Clear the history
     conversionHistory = [];
     document.getElementById('historyContent').innerHTML = '';
 }
@@ -157,11 +168,7 @@ document.getElementById('convert').addEventListener('click', convertCurrency);
 document.getElementById('swap').addEventListener('click', swapCurrencies);
 document.getElementById('reset').addEventListener('click', resetForm);
 
-// Add the pulse class if convert button is not clicked for a while
-setTimeout(() => {
-    document.getElementById('convert').classList.add('pulse');
-}, 5000);
-
-document.getElementById('convert').addEventListener('click', () => {
-    document.getElementById('convert').classList.remove('pulse');
-});
+// Fetch data on load
+fetchCurrencySymbols()
+    .then(fetchCurrencyCodes)
+    .catch(error => console.error('Initialization error:', error));
